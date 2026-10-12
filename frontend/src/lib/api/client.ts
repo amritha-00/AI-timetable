@@ -47,8 +47,14 @@ apiClient.interceptors.response.use(
 /** True when the app should read/write the in-memory mock layer instead of
  * making real HTTP calls - see src/lib/api/mocks. Toggled by the "Load demo
  * school" flow and by VITE_USE_MOCKS for local development without a
- * backend running. */
+ * backend running.
+ *
+ * A real signed-in tenant always wins over a stale demo flag: without this,
+ * a real account that had ever clicked "Load demo school" would be routed
+ * to the fake in-memory store forever afterwards - on every page, not just
+ * the one they clicked it from - with no visible sign anything was wrong. */
 export function usingMocks(): boolean {
+  if (localStorage.getItem("auth_token")) return false
   return localStorage.getItem("use_mocks") === "true" || import.meta.env.VITE_USE_MOCKS === "true"
 }
 
