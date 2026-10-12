@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef4fb;
+  --color-brand-100: #d7e6f5;
+  --color-brand-200: #b3cde9;
+  --color-brand-300: #83aed9;
+  --color-brand-400: #5389c4;
+  --color-brand-500: #326aa8;
+  --color-brand-600: #24518a;
+  --color-brand-700: #1e3a5f;
+  --color-brand-800: #182f4d;
+  --color-brand-900: #142740;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Subtle scrollbar for the timetable grid on webkit browsers */
+.grid-scroll::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.grid-scroll::-webkit-scrollbar-thumb {
+  background-color: theme(--color-brand-200);
+  border-radius: 9999px;
+}
+
+/* ===================================================================
+   Motion primitives - a small, consistent set of entrance/interaction
+   animations used across the app instead of one-off transitions per page.
+   =================================================================== */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes indeterminate {
+  0% { transform: translateX(-100%) scaleX(0.4); }
+  50% { transform: translateX(20%) scaleX(0.6); }
+  100% { transform: translateX(120%) scaleX(0.4); }
+}
+.progress-track {
+  position: relative;
+  overflow: hidden;
+  height: 6px;
+  border-radius: 9999px;
+  background: theme(--color-brand-100);
+}
+.progress-track > span {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  transform-origin: left center;
+  border-radius: 9999px;
+  background: theme(--color-brand-500);
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+.animate-fade-in { animation: fade-in 0.35s ease-out both; }
+.animate-fade-in-up { animation: fade-in-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-scale-in { animation: scale-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-in-right { animation: slide-in-right 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-backdrop-in { animation: backdrop-in 0.18s ease-out both; }
+.animate-pop { animation: pop 0.28s ease-out both; }
+
+.skeleton {
+  background: linear-gradient(90deg, theme(--color-slate-100) 25%, theme(--color-slate-200) 37%, theme(--color-slate-100) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* Stagger helper: nth-child delay applied inline via style in JSX for lists;
+   this just sets the base animation so items reveal in sequence rather than
+   all at once, which reads as noticeably more deliberate/designed. */
+.stagger-item {
+  animation: fade-in-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
