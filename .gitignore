@@ -34,3 +34,7 @@ vite.log
 
 # Docker volumes
 mysql_data/
+
+# Playwright/test screenshots
+*.png
+!frontend/public/**/*.png
