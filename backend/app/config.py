@@ -8,6 +8,7 @@ at the project root for the full list of variables this app understands.
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Literal
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -66,7 +67,24 @@ class Settings(BaseSettings):
     def sqlalchemy_database_url(self) -> str:
         """Build the SQLAlchemy connection string for MySQL via PyMySQL."""
         if self.database_url:
-            return self.database_url
+            # Managed MySQL hosts (Aiven, etc.) hand you a bare "mysql://..."
+            # URI to copy-paste - SQLAlchemy then defaults to the MySQLdb
+            # driver, which isn't installed (we use PyMySQL). Normalize it
+            # here so pasting that URI in as-is just works, instead of
+            # failing at import time with "No module named 'MySQLdb'".
+            url = self.database_url
+            if url.startswith("mysql://"):
+                url = "mysql+pymysql://" + url[len("mysql://") :]
+            # Aiven's URI also appends "?ssl-mode=REQUIRED" - a MySQL
+            # Connector/Python-style param PyMySQL doesn't recognize (the
+            # hyphen isn't even a valid keyword argument name, so it fails
+            # differently than a missing driver would). TLS is already
+            # handled explicitly in app/db/session.py's connect_args, so
+            # this query param is just dropped here, leaving any others.
+            parsed = urlsplit(url)
+            query = [(k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True) if k != "ssl-mode"]
+            url = urlunsplit(parsed._replace(query=urlencode(query)))
+            return url
         return (
             f"mysql+pymysql://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}?charset=utf8mb4"
