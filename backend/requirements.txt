@@ -17,6 +17,9 @@ cryptography==44.0.0
 # --- Auth (tenant + admin tokens, see app/auth.py) ---
 PyJWT==2.12.1
 
+# --- Billing (Stripe Checkout + webhooks, see app/routers/billing.py) ---
+stripe==16.0.0
+
 # --- Solver ---
 ortools==9.11.4210
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 import { AlertTriangle, CheckCircle2, Loader2, Lock, Sparkles, XCircle } from "lucide-react"
+import { toast } from "sonner"
 import { TimetableGrid } from "@/components/features/timetables/TimetableGrid"
 import { RulesScore } from "@/components/features/timetables/ConstraintCheck"
 import { Badge } from "@/components/ui/badge"
@@ -19,8 +20,8 @@ import { useRequirements } from "@/hooks/useRequirements"
 import { useRooms } from "@/hooks/useRooms"
 import { useTeachers } from "@/hooks/useTeachers"
 import { useAllEntries, useDeleteTimetable, useGenerateTimetable } from "@/hooks/useTimetables"
-import { authApi } from "@/lib/api/auth"
-import { usingMocks } from "@/lib/api/client"
+import { billingApi } from "@/lib/api/billing"
+import { toFriendlyErrorMessage, usingMocks } from "@/lib/api/client"
 import type { Timetable } from "@/types"
 
 interface Check { ok: boolean; text: string; fixHref?: string }
@@ -137,9 +138,15 @@ export default function GeneratePage() {
   const doUpgrade = async () => {
     setUpgrading(true)
     try {
-      await authApi.upgrade()
+      const result = await billingApi.checkout()
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl
+        return // navigating away to Stripe
+      }
       await refreshTenant()
       setPaywalled(false)
+    } catch (err) {
+      toast.error(toFriendlyErrorMessage(err))
     } finally {
       setUpgrading(false)
     }

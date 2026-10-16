@@ -1,10 +1,12 @@
-import { CheckCircle2, Settings, Sparkles } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useSearchParams } from "react-router-dom"
+import { CheckCircle2, CreditCard, Settings, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { PagePlaceholder } from "@/components/features/shared/PagePlaceholder"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
-import { authApi } from "@/lib/api/auth"
-import { usingMocks } from "@/lib/api/client"
+import { billingApi } from "@/lib/api/billing"
+import { toFriendlyErrorMessage, usingMocks } from "@/lib/api/client"
 
 const PLAN_FEATURES = [
   "Unlimited timetable generations",
@@ -14,15 +16,54 @@ const PLAN_FEATURES = [
 
 function BillingSection() {
   const { tenant, refreshTenant } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [busy, setBusy] = useState<"checkout" | "portal" | null>(null)
+
+  // Returning from Stripe Checkout lands back here with ?checkout=success|cancelled.
+  useEffect(() => {
+    const result = searchParams.get("checkout")
+    if (!result) return
+    if (result === "success") {
+      toast.success("Payment received - syncing your plan...")
+      // The webhook that flips is_subscribed can land a beat after Stripe
+      // redirects the browser back, so give it a moment before re-checking.
+      setTimeout(() => refreshTenant(), 1500)
+    } else if (result === "cancelled") {
+      toast.info("Checkout cancelled - no charge was made.")
+    }
+    searchParams.delete("checkout")
+    setSearchParams(searchParams, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   if (!tenant || usingMocks()) return null
 
   const upgrade = async () => {
+    setBusy("checkout")
     try {
-      await authApi.upgrade()
+      const result = await billingApi.checkout()
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl
+        return // navigating away
+      }
       await refreshTenant()
       toast.success("You're on the unlimited plan now.")
-    } catch {
-      toast.error("Couldn't upgrade right now. Please try again.")
+    } catch (err) {
+      toast.error(toFriendlyErrorMessage(err))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const manage = async () => {
+    setBusy("portal")
+    try {
+      const url = await billingApi.portal()
+      window.location.href = url
+    } catch (err) {
+      toast.error(toFriendlyErrorMessage(err))
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -38,18 +79,22 @@ function BillingSection() {
       </div>
 
       {tenant.is_subscribed ? (
-        <ul className="space-y-1.5 text-sm">
-          {PLAN_FEATURES.map((f) => (
-            <li key={f} className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-success" /> {f}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-1.5 text-sm">
+            {PLAN_FEATURES.map((f) => (
+              <li key={f} className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-success" /> {f}
+              </li>
+            ))}
+          </ul>
+          <Button variant="outline" onClick={manage} disabled={busy === "portal"}>
+            <CreditCard className="h-4 w-4" /> {busy === "portal" ? "Opening..." : "Manage billing"}
+          </Button>
+        </>
       ) : (
         <div className="rounded-lg border border-border p-4 space-y-3">
           <div className="flex items-baseline justify-between">
             <span className="font-medium">Unlimited plan</span>
-            <span className="text-sm text-muted-foreground">Demo pricing - no card required</span>
           </div>
           <ul className="space-y-1.5 text-sm text-muted-foreground">
             {PLAN_FEATURES.map((f) => (
@@ -58,12 +103,10 @@ function BillingSection() {
               </li>
             ))}
           </ul>
-          <Button onClick={upgrade}>
-            <Sparkles className="h-4 w-4" /> Upgrade now
+          <Button onClick={upgrade} disabled={busy === "checkout"}>
+            <Sparkles className="h-4 w-4" /> {busy === "checkout" ? "Redirecting..." : "Upgrade now"}
           </Button>
-          <p className="text-xs text-muted-foreground">
-            This is a demo checkout - it flips your plan immediately with no real payment taken.
-          </p>
+          <p className="text-xs text-muted-foreground">You'll be taken to Stripe's secure checkout to complete payment.</p>
         </div>
       )}
     </section>

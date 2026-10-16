@@ -33,9 +33,4 @@ export const authApi = {
     const { data } = await apiClient.get<Tenant>("/auth/me")
     return data
   },
-  /** Mock billing - flips `is_subscribed` with no real payment processor. */
-  upgrade: async (): Promise<Tenant> => {
-    const { data } = await apiClient.post<Tenant>("/auth/upgrade")
-    return data
-  },
 }

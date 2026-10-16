@@ -56,12 +56,36 @@ class Settings(BaseSettings):
     solver_max_seconds: int = 30
     solver_num_workers: int = 8
 
+    # ---------- Billing (Stripe) ----------
+    # Test-mode keys from https://dashboard.stripe.com/test/apikeys - free,
+    # no card needed to test. Left blank, billing falls back to a mock
+    # "upgrade" (see app/routers/billing.py) so local dev works without a
+    # Stripe account.
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    # Price id for the recurring plan, e.g. "price_1Abc...", from
+    # Dashboard -> Product catalog -> your product -> pricing.
+    stripe_price_id: str = ""
+    # From the webhook endpoint's "Signing secret" in the Stripe Dashboard
+    # (or `stripe listen` output when testing locally) - verifies webhook
+    # calls actually came from Stripe, not a forged request.
+    stripe_webhook_secret: str = ""
+    # Where Stripe Checkout sends the tenant back to after payment/cancel.
+    # Must be the frontend's real origin in production.
+    frontend_url: str = "http://localhost:5173"
+
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
     )
+
+    @property
+    def stripe_configured(self) -> bool:
+        """Whether real Stripe billing is wired up. False just means billing
+        runs on the mock fallback - not an error state (see app/routers/billing.py)."""
+        return bool(self.stripe_secret_key and self.stripe_price_id)
 
     @property
     def sqlalchemy_database_url(self) -> str:

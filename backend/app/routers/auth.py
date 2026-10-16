@@ -1,6 +1,6 @@
-"""Signup/login for the tenant model, plus a mock 'upgrade' (no real payment
-processor - see `app/models/tenant.py` for the trial-counter fields this
-flips)."""
+"""Signup/login for the tenant model. Subscription/billing lives in
+app/routers/billing.py - see app/models/tenant.py for the plan fields it
+manages."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -52,15 +52,4 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
 
 @router.get("/me", response_model=TenantOut)
 def me(tenant: Tenant = Depends(get_current_tenant)) -> Tenant:
-    return tenant
-
-
-@router.post("/upgrade", response_model=TenantOut)
-def upgrade(tenant: Tenant = Depends(get_current_tenant), db: Session = Depends(get_db)) -> Tenant:
-    """Mock billing: no payment processor is wired up. In a real deployment
-    this would instead be a webhook handler reacting to a completed
-    checkout, not an endpoint the client can call directly."""
-    tenant.is_subscribed = True
-    db.commit()
-    db.refresh(tenant)
     return tenant

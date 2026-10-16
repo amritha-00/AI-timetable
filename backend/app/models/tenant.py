@@ -21,8 +21,13 @@ class Tenant(Base):
     school_name: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Mock billing only - no real payment processor. Flipped by POST /api/auth/upgrade.
+    # Source of truth for plan status is Stripe - this column mirrors it so
+    # `can_generate` below stays a cheap local check. Kept in sync by the
+    # webhook in app/routers/billing.py, never flipped directly by the
+    # client (see the removed POST /api/auth/upgrade mock endpoint).
     is_subscribed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
     trial_generations_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
